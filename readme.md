@@ -221,3 +221,93 @@ dist
   }
 }
 ```
+
+##  代码提交校验
+- lint-staged 本地暂存代码检查工具
+- husky 操作 git 钩子的工具
+- commitlint commit 信息校验工具 (@commitlint/cli @commitlint/config-conventional)
+- commitizen cz-git 辅助 commit 信息 ,就像这样,通过选择输入,规范提交信息
+
+```sh
+pnpm add lint-staged husky -D
+# 在 package.json 中添加脚本
+npm set-script prepare "husky install"
+
+# 初始化husky 将 git hooks 钩子交由 husky 执行
+pnpm prepare
+npx husky add .husky/pre-commit "npx lint-staged"
+# package.json 添加 lint-staged 脚本
+npm set-script lint-staged "lint-staged"
+```
+
+根目录创建 `.lintstagedrc.json` 进行配置，或者通过 `lint-staged.config.js` 进行配置。
+
+```json
+{
+	"*.{js,jsx,ts,tsx}": ["eslint --fix", "prettier --write"],
+	"{!(package)*.json,*.code-snippets,.!(browserslist)*rc}": ["prettier --write--parser json"],
+	"package.json": ["prettier --write"],
+	"*.{scss,less,styl}": ["stylelint --fix", "prettier --write"],
+	"*.md": ["prettier --write"]
+}
+```
+
+commit 提交时，信息模板的依赖
+
+> [cz-git 指南]https://cz-git.qbb.sh/zh/guide/
+
+```sh
+pnpm add @commitlint/cli @commitlint/config-conventional -D
+npx husky add .husky/commit-msg 'npx --no-install commitlint --edit "$1"'
+# 安装辅助提交依赖
+pnpm i commitizen cz-git -D
+
+# 安装指令和命令行的展示信息
+npm set-script commit "git-cz" # package.json 中添加 commit 指令, 执行 `git-cz` 指令
+```
+
+添加 commitlint.config.cjs 并且配置
+
+```js
+module.exports = {
+  extends: ['@commitlint/config-conventional'],
+  rules: {
+    'type-enum': [
+      2,
+      'always',
+      [
+        'ci',
+        'docs',
+        'feat',
+        'fix',
+        'perf',
+        'refactor',
+        'build',
+        'chore',
+        'revert',
+        'style',
+        'test'
+      ]
+    ],
+    'type-empty': [2, 'never'], // <type> 不能为空
+    'type-case': [0],
+    'scope-empty': [0],
+    'scope-case': [0],
+    'subject-empty': [2, 'never'], // <subject> 不能为空 (默认)
+    'subject-full-stop': [0, 'never'],
+    'subject-case': [0, 'never'],
+
+    'header-max-length': [0, 'always', 72]
+  }
+}
+```
+
+package.json 中,将原来commit配置,变更为自定义配置
+
+```json
+"config": {
+		"commitizen": {
+			"path": "node_modules/cz-git"
+		}
+	}
+```
